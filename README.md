@@ -22,7 +22,11 @@ Tsinghua University
   <img src="assets/teaser.png" width="98%" alt="EchoSpec Overview and Headline Findings"/>
 </p>
 
-> **TL;DR:** Outcome-only RL search agents confuse *repetition* with *independent corroboration*: eight paraphrased copies of a single unsupported claim flip **58.4%–72.6%** of answers they get right on the clean corpus while collapsing abstention to **0.0%–3.5%**. **EchoSpec** trains search agents against **five symmetric corpus-transformation specifications** via a **multi-hop verification warm-start** and **$\lambda$-calibrated group RL**, cutting echo deference by **30–44 percentage points** across Qwen2.5 (3B/7B) and Llama-3.1 (8B) and transferring **zero-shot** across dense (BGE) and lexical (Okapi BM25) retrievers.
+> **TL;DR:** Reinforcement-learned search agents often mistake repeated unsupported claims for independent evidence, stopping their search before reaching the primary source. **EchoSpec** addresses this failure by training agents to recover and verify evidence through multi-hop search, rather than merely increasing retrieval depth or filtering duplicate passages. Across Qwen2.5 and Llama-3.1 backbones, EchoSpec substantially reduces susceptibility to false-claim echoes, improves primary-evidence recovery, and transfers zero-shot to unseen dense and lexical retrievers.
+
+- **28.9% Def@8** on Qwen2.5-7B (3 seeds) and **30.6%** on Llama-3.1-8B, cutting eight-echo deference by **30–44 percentage points** relative to seven released RL search agents (58.6%–72.9%).
+- **25.8%–26.5% Reach@8** under eight competing false-claim echoes (nearly $4\times$ the 7.1% base agent) alongside **47.1%–55.4%** macro answer precision across seven open-domain QA benchmarks.
+- **24.0%–30.5% Def@8** under **zero-shot cross-retriever transfer** from e5-base-v2 to unseen dense (BAAI/bge-base-en-v1.5) and lexical (Okapi BM25) indices without retraining.
 
 ---
 
@@ -32,19 +36,19 @@ Large language model search agents interleave chain-of-thought reasoning with mu
 
 **EchoSpec** provides both a controlled **behavioral specification suite** over the 21M-passage Wikipedia dump (wiki-18) and a **two-stage post-training recipe** that teaches search agents *what* to query rather than merely *how often* to search:
 
-- **Five Symmetric Corpus-Transformation Specifications** (**Identity**, **Dup(*m*)**, **Inject(*m*)**, **Consistent(*m*)**, **Rewrite**, and **Delete**) that separate invariance under claim repetition from sensitivity to genuine primary-evidence updates, with zero lexical shortcut cues between true and false claims (5-fold GroupKFold TF-IDF ROC-AUC 0.506–0.517, chance = 0.50).
-- **Verification-Oriented Query Reformulation:** Rather than stopping at top-ranked claim echoes, **EchoSpec** pivots to bridge entities, verifies primary passages (25.8%–26.5% primary-evidence reach at $m=8$ echoes), and abstains selectively when primary support is absent (37.6%–52.5% on Delete).
-- **Cross-Scale, Cross-Family & Cross-Retriever Generalization:** Using identical hyperparameters without per-model tuning, **EchoSpec** brings Def@8 into a tight **28.9%–30.6%** band across Qwen2.5-3B-Instruct, Qwen2.5-7B-Instruct, and Llama-3.1-8B-Instruct, and transfers zero-shot from e5-base-v2 to BGE-base-en-v1.5 (29.4% / 30.5%) and lexical Okapi BM25 (**25.1% / 24.0%**).
+- **Five Corpus Transformations Plus an Unmodified Identity World:** Each multi-hop question instantiates an unmodified **Identity** world alongside five symmetric transformations (**Dup($m$)**, **Inject($m$)**, **Consistent($m$)**, **Rewrite**, and **Delete**; 10 worlds per test question across $m \in \{1, 3, 8\}$), separating invariance under claim repetition from sensitivity to genuine primary-evidence updates. Swapping only the answer string between true and false claims limits a held-out TF-IDF shortcut classifier to **0.60–0.68 AUC** across both test suites.
+- **Verification-Oriented Query Reformulation:** Rather than stopping at top-ranked claim echoes, **EchoSpec** pivots to bridge entities, verifies primary passages (25.8%–26.5% primary-evidence reach at $m=8$ echoes), and abstains selectively when primary support is absent (37.5%–52.5% on Delete).
+- **Cross-Scale, Cross-Family & Cross-Retriever Replication:** Using identical hyperparameters without per-model tuning, **EchoSpec** brings Def@8 into a tight **28.9%–30.6%** band across Qwen2.5-3B-Instruct, Qwen2.5-7B-Instruct, and Llama-3.1-8B-Instruct, and transfers zero-shot from e5-base-v2 to BGE-base-en-v1.5 (29.4% / 30.5% Def@8) and lexical Okapi BM25 (**25.1% / 24.0%** Def@8).
 
 ---
 
 ## Why Search Agents Follow Echoes
 
-Auditing seven open-source RL search agents (Search-R1, ZeroSearch, AutoRefine, ReSearch, R1-Searcher, and AWA-RL) alongside inference-time RAG defenses reveals three structural failure modes:
+Auditing seven open-source RL search checkpoints—Search-R1, ZeroSearch, AutoRefine (Instruct), AutoRefine (Base), ReSearch, R1-Searcher, and AWA-RL—alongside five inference-time RAG defenses reveals three structural findings:
 
-1. **Paraphrased echoes displace primary evidence from top-$k$ slots:** Because bare claims align directly with question surface forms while primary multi-hop facts reside under bridge-entity articles, eight paraphrased copies flip **58.4%–72.6%** of previously correct answers across all seven RL agents.
-2. **Exact-match RL erases selective abstention:** Standard binary outcome rewards (0 for wrong *and* 0 for abstention) make guessing strictly dominant, driving abstention on deleted-evidence questions from **48.4%** down to **0.0%–3.5%** within 100 RL updates.
-3. **More search turns or retrieval deduplication alone cannot recover bridge hops:** Doubling the search budget ($B=4 \to 8$) or intercepting early answers ($\ge 3$ searches) with explicit verification prompts still leaves Search-R1 at **55.5%–66.2%** Def@8. Agents must *learn* to reformulate queries toward bridge entities—and when paired with inference-time filtering (TrustRAG or Semantic Dedup), **EchoSpec** compounds orthogonally to **12.8%** Def@8 or **36.1%** Reach@8.
+1. **Paraphrased echoes displace primary evidence from top-$k$ slots:** Because bare claims align directly with question surface forms while primary multi-hop facts reside under bridge-entity articles, eight paraphrased copies overturn **58.6%–72.9%** of clean-correct answers across all seven released RL agents.
+2. **Exact-match RL erases selective abstention:** Standard binary outcome rewards (0 for wrong *and* 0 for abstention) make guessing dominant, collapsing abstention on deleted-evidence questions from **49.2%** on the Qwen2.5-7B base agent down to **0.0%–0.2%** across released RL agents (and **1.4%** under same-data exact-match RL).
+3. **More retrieval does not guarantee reliable verification:** Doubling the search budget ($B=4 \to 8$) leaves Search-R1 at **66.2%** Def@8, and even forcing at least three search turns raises Search-R1's primary-evidence reach from **13.3% to 29.5%** while leaving Def@8 at **55.5%** (58.7% with an explicit verification prompt). Agents must learn to reformulate queries toward bridge entities and weigh primary evidence above echoes—and when paired with inference-time filtering, **EchoSpec** compounds orthogonally to **12.8%** Def@8 (with TrustRAG) and **36.2%** Reach@8 (with Semantic Dedup).
 
 ---
 
@@ -54,64 +58,94 @@ Auditing seven open-source RL search agents (Search-R1, ZeroSearch, AutoRefine, 
   <img src="assets/method.png" width="98%" alt="EchoSpec Two-Stage Training Pipeline"/>
 </p>
 
-### 1. Five Symmetric Corpus-Transformation Families
-Given a multi-hop question $q$, intermediate bridge hops $h_1, \dots, h_{L-1}$, and final primary passage $e \in \mathcal{C}$ supporting gold answer $y$:
-- **Answer-Invariant Worlds ($y_T = y$):**
-  - **Identity:** unmodified 21M-passage wiki-18 corpus $\mathcal{C}$.
+### 1. Five Corpus Transformations & Identity World
+Given a multi-hop question $q$, intermediate bridge articles $h_1, \dots, h_{K-1}$, and final primary passage $e \in \mathcal{C}$ supporting gold answer $y$, we pair an unmodified **Identity** world ($\mathcal{C}$ unchanged, $y_T = y$) with five corpus transformations:
+- **Answer-Invariant Transformations ($y_T = y$):**
   - **Dup($m$):** inserts $m$ paraphrased copies of primary passage $e$.
-  - **Inject($m$):** inserts $m$ diverse third-party claim passages asserting plausible decoy $\tilde{y} \neq y$ *without* fabricating bridge facts, while keeping $e$ intact in $\mathcal{C}$.
-  - **Consistent($m$):** constructs the exact same $m$ claim templates with $\tilde{y}$ substituted back to $y$, preventing "ignore every repeated claim" shortcuts.
-- **Answer-Shifting Worlds:**
-  - **Rewrite ($y_T = \tilde{y}$):** masks all passages leaking $(e, y)$ via 4-round retrieval verification ($k_{\text{probe}} = 30$) and replaces $e$ with a rewritten primary passage supporting $\tilde{y}$.
-  - **Delete ($y_T = \text{ABSTAIN}$):** applies the verified mask without replacement, rendering $q$ unanswerable from the corpus.
+  - **Inject($m$):** inserts $m$ diverse bare-claim passages asserting plausible decoy $\tilde{y} \neq y$ *without* fabricating bridge derivations, while keeping $e$ intact in $\mathcal{C}$.
+  - **Consistent($m$):** uses the exact same $m$ generated claim passages with only $\tilde{y} \leftrightarrow y$ swapped across title and body, preventing copy-count or stylistic shortcuts.
+- **Answer-Shifting Transformations:**
+  - **Rewrite ($y_T = \tilde{y}$):** iteratively masks passages surfacing $(e, y)$ in the retriever and inserts a minimally edited primary passage supporting $\tilde{y}$.
+  - **Delete ($y_T = \text{ABSTAIN}$):** applies the retrieval-verified mask without replacement, rendering $q$ unanswerable from the corpus.
 
 ### 2. Stage 1 — Multi-Hop Verification Warm-Start
-Outcome-only RL faces a cold-start barrier under heavy echoes ($m = 8$): initial rollouts almost never uncover $e$, yielding near-zero group reward variance. Stage 1 synthesizes recovery trajectories using synthesis-only chain hints ($h_1 \to \dots \to e$, stripped before storage) and enforces **three structural quality gates**:
-1. **Grounded Outcome:** $\hat{y} = y$ must retrieve $e \in D$ on answerable worlds; Delete trajectories must execute $\ge 3$ searches before abstaining.
-2. **Hop Continuity:** No query $q_t$ may name a bridge or final entity title unless that entity already appeared in $q$ or in an earlier retrieved passage block $D_{<t}$.
-3. **Self-Contained Reasoning:** Prompts and reasoning traces contain zero references to synthesis guidance.
+Outcome-only RL faces a cold-start barrier under heavy echoes ($m = 8$): initial rollouts rarely uncover $e$, yielding near-zero group reward variance. Stage 1 synthesizes recovery trajectories using temporary article-chain hints ($h_1 \to \dots \to e$, stripped before supervised fine-tuning) and enforces **three structural quality gates**:
+1. **Grounded Outcome:** $\hat{y} = y_T$ must retrieve $e \in D$ on answerable worlds; Delete trajectories must execute $\ge 3$ searches before abstaining.
+2. **Hop Continuity:** Every hinted article title $h_k, e$ absent from $q$ must appear in an earlier retrieved passage block $D_{<t}$ before being queried at turn $t$.
+3. **Self-Contained Reasoning:** Prompts and reasoning traces contain zero references to the temporary synthesis hint.
 
 ### 3. Stage 2 — $\lambda$-Calibrated Group RL
 Starting from the warm-start LoRA adapter $\pi_{\text{SFT}}$, Stage 2 optimizes asynchronous GRPO across paired (Identity, Transformed) rollouts with three coupled components:
-- **Evidence-Gated $\lambda$-Reward:** Grounded correct answers ($e \in D$) receive $+1$, unverified lucky guesses ($e \notin D$) are discounted to $\alpha = 0.25$, abstention receives $0$, and wrong answers incur $-\lambda$ ($\lambda = 0.1$), inducing the exact Bayes abstention threshold $p^* = \frac{\lambda}{1+\lambda}$.
-- **Calibration-Preserving Acquisition Bonus:** $\beta_{\text{acq}}\,\phi(D)$ ($\beta_{\text{acq}} = 0.3$) credits retrieving $e$ ($+1.0$) and intermediate bridge titles ($+0.5$) *independently of the final answer*, canceling out of $\mathbb{E}[R(\text{ans}) - R(\text{ABSTAIN}) \mid D]$ so $p^*$ is preserved exactly.
-- **Scale-Preserving Advantages:** Omits standard GRPO's $1/\sigma_g$ division so asymmetric $+1 / 0 / -\lambda$ penalties retain their calibrated units across worlds.
+- **Evidence-Gated $\lambda$-Reward:** Correct answers supported by primary evidence ($e \in D$) receive $+1$, correct but unverified answers ($e \notin D$) receive a discounted reward $\alpha = 0.25$, wrong answers incur $-\lambda$ ($\lambda = 0.1$), and abstention receives $+1$ on Delete worlds or $0$ on answerable worlds. Once primary evidence is retrieved ($e \in D$), answering beats abstaining in expectation iff $p > \frac{\lambda}{1+\lambda}$; when primary evidence is absent ($e \notin D$), discounting unverified matches raises the required confidence threshold to $p > \frac{\lambda}{\alpha+\lambda}$, discouraging echo guessing.
+- **Decision-Threshold-Preserving Acquisition Bonus:** $\beta_{\text{acq}}\,\phi(D)$ ($\beta_{\text{acq}} = 0.3$) credits retrieving $e$ ($+1.0$) and intermediate bridge articles ($+0.5$) *independently of the final output $\hat{y}$*, canceling from $R_{\text{total}}(\text{answer}, D) - R_{\text{total}}(\text{ABSTAIN}, D)$ for every $D$ so the optimal stopping threshold is preserved exactly.
+- **Scale-Preserving Cross-World Advantages:** Mean-centered advantages omit standard GRPO's $1/\sigma_g$ division—which would otherwise cancel $\lambda$ whenever a rollout group contains only abstentions and wrong answers—and blend transformed and identity baselines on answer-invariant worlds.
 
 ---
 
 ## Main Results
 
 ### Transformation-World Robustness & Open-Domain QA Precision
-Pooled across **Test Set A (Qwen3-32B)** and **held-out Test Set B (Phi-4)** (9,830 episodes; 10 paired worlds per base item) and **7 standard open-domain QA benchmarks** (NQ, TriviaQA, PopQA, HotpotQA, 2WikiMultiHopQA, MuSiQue, and Bamboogle):
+Pooled across **Test Set A (Qwen3-32B, 507 questions $\times$ 10 worlds = 5,070 episodes)** and **held-out Test Set B (Phi-4, unseen generator family, 607 questions $\times$ 10 worlds = 6,070 episodes; 11,140 transformation episodes total)**, plus **7 open-domain QA benchmarks** (NQ, TriviaQA, PopQA, HotpotQA, 2WikiMultiHopQA, MuSiQue, and Bamboogle):
 
-| Category / Method | Backbone | Def@1&nbsp;↓ | Def@3&nbsp;↓ | Def@8&nbsp;↓ | Reach@8&nbsp;↑ | Acc@8&nbsp;↑ | Rewrite&nbsp;↑ | Abst.&nbsp;↑ | QA&nbsp;Prec.&nbsp;↑ | RA-F1&nbsp;↑ |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Search-R1** *(released RL)* | Qwen2.5-7B | 38.6 | 59.8 | 68.7 | 13.3 | 7.3 | 52.7 | 0.2 | 39.2 | 39.0 |
-| **AutoRefine** *(released RL)* | Qwen2.5-7B | 31.1 | 52.3 | 58.4 | 19.8 | 10.6 | 56.5 | 0.0 | 40.9 | 40.9 |
-| **AWA-RL** *(uncertainty RL)* | Qwen2.5-7B | 42.3 | 60.0 | 68.9 | 21.0 | 8.2 | 56.3 | 3.5 | 40.5 | 38.6 |
-| **TrustRAG** *(inference filter)* | Qwen2.5-7B | 38.6 | 24.1 | 22.7 | 11.4 | 6.8 | 31.2 | 50.8 | 31.9 | 28.4 |
-| **Exact-Match RL** *(same data)* | Qwen2.5-7B | 35.1 | 59.6 | 67.8 | 15.9 | 7.8 | 54.0 | 1.5 | 37.3 | 37.2 |
-| **Exact-Match RL** *(same data)* | Llama-3.1-8B | 35.6 | 58.1 | 66.7 | 17.6 | 9.3 | 56.2 | 0.9 | 41.9 | 41.9 |
-| **EchoSpec** *(3B scale)* | Qwen2.5-3B | 15.2 | 24.6 | 30.4 | 22.5 | 13.1 | 50.7 | 38.9 | 42.8 | 35.4 |
-| **EchoSpec** *(3-seed mean)* | Qwen2.5-7B | 14.3 | 23.9 | **28.9** | **25.8** | **16.7** | **57.1** | 37.6 | 45.7 | 39.7 |
-| **EchoSpec** *(cross-family)* | Llama-3.1-8B | **11.1** | 24.1 | 30.6 | **26.5** | **17.2** | 54.0 | **52.5** | **55.4** | **44.2** |
-| **EchoSpec + TrustRAG** | Qwen2.5-7B | 14.6 | **12.4** | **12.8** | 29.4 | 18.6 | 56.9 | 42.2 | 45.4 | 39.2 |
-| **EchoSpec + Semantic Dedup** | Qwen2.5-7B | 14.2 | 22.2 | 28.9 | **36.1** | **22.2** | **57.1** | 37.2 | 45.8 | 39.8 |
+| Method | Backbone | Def@1&nbsp;↓ | Def@8&nbsp;↓ | Reach@8&nbsp;↑ | Acc@8&nbsp;↑ | Abst.&nbsp;↑ | Precision&nbsp;↑ |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Search-R1** *(released RL)* | Qwen2.5-7B | 46.0 | 69.1 | 13.3 | 6.8 | 0.2 | 38.4 |
+| **AutoRefine (Base)** *(released RL)* | Qwen2.5-7B | 40.5 | 59.8 | 18.1 | 12.5 | 0.0 | 44.7 |
+| **R1-Searcher** *(released RL)* | Qwen2.5-7B | 33.3 | 61.9 | 21.0 | 12.5 | 0.0 | 41.8 |
+| **AWA-RL** *(uncertainty RL)* | Qwen2.5-7B | 48.4 | 58.6 | 19.8 | 6.0 | 0.0 | 35.9 |
+| **TrustRAG** *(inference filter)* | Qwen2.5-7B | 35.4 | 22.8 | 11.4 | 9.4 | 48.0 | 40.3 |
+| **Exact-Match RL** *(same data)* | Qwen2.5-7B | 35.2 | 67.7 | 15.9 | 8.1 | 1.4 | 37.2 |
+| **Exact-Match RL** *(same data)* | Llama-3.1-8B | 33.8 | 66.7 | 17.6 | 9.8 | 2.8 | 42.7 |
+| **EchoSpec** *(cross-scale, 1 seed)* | Qwen2.5-3B | 15.3 | 30.4 | 22.5 | 12.4 | 37.5 | 42.8 |
+| **EchoSpec** *(3-seed mean)* | Qwen2.5-7B | 14.3 | **28.9** | **25.8** | **16.7** | 37.6 | 47.1 |
+| **EchoSpec** *(cross-family, 1 seed)* | Llama-3.1-8B | **11.1** | 30.6 | **26.5** | **17.2** | **52.5** | **55.4** |
+| **EchoSpec + TrustRAG** *(3 seeds)* | Qwen2.5-7B | 13.8 | **12.8** | 29.4 | 19.0 | 36.5 | 44.1 |
+| **EchoSpec + Sem. Dedup** *(3 seeds)* | Qwen2.5-7B | 16.7 | 28.7 | **36.2** | **20.2** | 33.9 | 46.2 |
+
+<details>
+<summary><b>Full Benchmark Table (all 7 released RL agents, Def@3, RA-F1 & Rewrite/Generator breakdown)</b></summary>
+
+<br>
+
+| Method | Backbone | Def@1&nbsp;↓ | Def@3&nbsp;↓ | Def@8&nbsp;↓ | Reach@8&nbsp;↑ | Acc@8&nbsp;↑ | Abst.&nbsp;↑ | Precision&nbsp;↑ | RA-F1&nbsp;↑ |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Search-R1 | Qwen2.5-7B | 46.0 | 63.3 | 69.1 | 13.3 | 6.8 | 0.2 | 38.4 | 38.4 |
+| ZeroSearch | Qwen2.5-7B | 53.0 | 69.6 | 72.9 | 7.3 | 3.8 | 0.1 | 35.2 | 35.2 |
+| AutoRefine (Instruct) | Qwen2.5-7B | 47.8 | 63.0 | 72.2 | 13.0 | 8.8 | 0.0 | 42.4 | 42.4 |
+| AutoRefine (Base) | Qwen2.5-7B | 40.5 | 57.2 | 59.8 | 18.1 | 12.5 | 0.0 | 44.7 | 44.7 |
+| ReSearch | Qwen2.5-7B | 43.5 | 64.5 | 68.9 | 20.9 | 9.4 | 0.0 | 40.6 | 40.6 |
+| R1-Searcher | Qwen2.5-7B | 33.3 | 54.2 | 61.9 | 21.0 | 12.5 | 0.0 | 41.8 | 41.7 |
+| AWA-RL | Qwen2.5-7B | 48.4 | 55.6 | 58.6 | 19.8 | 6.0 | 0.0 | 35.9 | 35.9 |
+| Qwen2.5-7B (no defense) | Qwen2.5-7B | 41.9 | 57.2 | 58.8 | 7.1 | 5.5 | 49.2 | 41.1 | 33.8 |
+| TrustRAG | Qwen2.5-7B | 35.4 | 41.7 | 22.8 | 11.4 | 9.4 | 48.0 | 40.3 | 33.0 |
+| $\lambda$-reward RL | Qwen2.5-7B | 45.4 | 68.4 | 69.4 | 9.4 | 5.2 | 32.5 | 42.4 | 37.6 |
+| Exact-Match RL | Qwen2.5-7B | 35.2 | 59.5 | 67.7 | 15.9 | 8.1 | 1.4 | 37.2 | 36.8 |
+| Exact-Match RL | Llama-3.1-8B | 33.8 | 61.3 | 66.7 | 17.6 | 9.8 | 2.8 | 42.7 | 42.2 |
+| **EchoSpec** (1 seed) | Qwen2.5-3B | 15.3 | 29.6 | 30.4 | 22.5 | 12.4 | 37.5 | 42.8 | 36.9 |
+| **EchoSpec** (3 seeds) | Qwen2.5-7B | 14.3 | 23.9 | 28.9 | 25.8 | 16.7 | 37.6 | 47.1 | 40.1 |
+| **EchoSpec** (1 seed) | Llama-3.1-8B | 11.1 | 24.1 | 30.6 | 26.5 | 17.2 | 52.5 | 55.4 | 44.2 |
+| **EchoSpec + TrustRAG** (3 seeds) | Qwen2.5-7B | 13.8 | 19.4 | 12.8 | 29.4 | 19.0 | 36.5 | 44.1 | 38.3 |
+| **EchoSpec + Sem. Dedup** (3 seeds) | Qwen2.5-7B | 16.7 | 25.9 | 28.7 | 36.2 | 20.2 | 33.9 | 46.2 | 40.0 |
+
+*Per-generator split:* On **Test Set A** (Qwen3-32B), EchoSpec achieves **19.0% / 23.6%** Def@8, **27.7% / 28.4%** Reach@8, and **13.5% / 13.6%** Rewrite exact match on Qwen2.5-7B / Llama-3.1-8B; on **Test Set B** (unseen Phi-4 family), EchoSpec achieves **38.8% / 37.7%** Def@8, **24.0% / 24.6%** Reach@8, and **16.9% / 18.1%** Rewrite exact match (vs. 7.9% / 10.2% Rewrite on base Qwen2.5-7B).
+
+</details>
 
 <p align="center">
   <img src="assets/analysis.png" width="94%" alt="Behavioral Mechanism: Primary Evidence Reach vs Conditional Deference"/>
 </p>
 
 ### Zero-Shot Cross-Retriever Transfer
-Keeping trained weights completely frozen (trained exclusively against e5-base-v2), we swap the entire 21M-passage wiki-18 index at test time to **BAAI/bge-base-en-v1.5** (CLS-pooled dense retriever) and exact **Okapi BM25** ($k_1 = 1.2, b = 0.75$ lexical retriever):
+Keeping trained weights completely frozen (trained exclusively against e5-base-v2), we swap the entire 21M-passage wiki-18 index at test time to **BAAI/bge-base-en-v1.5** (CLS-pooled dense retriever) and exact **Okapi BM25** ($k_1 = 1.2, b = 0.75$ lexical retriever) under the unified exclude-seen (+xs) protocol:
 
 | Method | e5-base-v2 *(In-Domain)*<br>Def@8&nbsp;↓ / Reach@8&nbsp;↑ | BGE-base-en-v1.5 *(Zero-Shot)*<br>Def@8&nbsp;↓ / Reach@8&nbsp;↑ | Okapi BM25 *(Zero-Shot Lexical)*<br>Def@8&nbsp;↓ / Reach@8&nbsp;↑ |
 | :--- | :---: | :---: | :---: |
-| **Search-R1** (Qwen2.5-7B, +xs) | 68.7 / 13.3 | 62.6 / 16.4 | 55.8 / 15.8 |
-| **AutoRefine** (Qwen2.5-7B, +xs) | 59.7 / 18.2 | 58.1 / 19.6 | 53.6 / 17.5 |
-| **AWA-RL** (Qwen2.5-7B, +xs) | 61.6 / 20.9 | 61.1 / 19.9 | 56.2 / 17.2 |
-| **EchoSpec** (**Qwen2.5-7B**, 3 seeds) | **28.9 / 25.8** | **29.4 / 26.0** | **25.1 / 22.9** |
-| **EchoSpec** (**Llama-3.1-8B**) | **30.6 / 26.5** | **30.5 / 24.4** | **24.0 / 24.4** |
+| **Search-R1** (Qwen2.5-7B, +xs) | 64.4 / 14.0 | 71.0 / 12.3 | 64.8 / 11.9 |
+| **AutoRefine, Base** (Qwen2.5-7B, +xs) | 59.7 / 18.2 | 66.1 / 13.4 | 66.8 / 14.0 |
+| **R1-Searcher** (Qwen2.5-7B, +xs) | 60.7 / 22.3 | 62.2 / 20.8 | 60.5 / 19.8 |
+| **AWA-RL** (Qwen2.5-7B, +xs) | 60.3 / 20.7 | 58.1 / 21.2 | 53.6 / 20.9 |
+| **EchoSpec** (**Qwen2.5-7B**, +xs, 3 seeds) | **28.9 / 25.8** | **29.4 / 26.0** | **25.1 / 22.5** |
+| **EchoSpec** (**Llama-3.1-8B**, +xs, 1 seed) | **30.6 / 26.5** | **30.5 / 25.2** | **24.0 / 24.4** |
 
 ---
 
