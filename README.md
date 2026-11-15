@@ -176,7 +176,7 @@ pytest -q tests
 
 ## End-to-End Reproduction
 
-No proprietary datasets or manual preprocessing are required: every corpus index, multi-hop base item, verified deletion mask, and symmetric transformation world is reconstructed deterministically from public HuggingFace releases.
+No proprietary datasets or manual preprocessing are required: all corpus indices, multi-hop base splits, deletion masks, and transformation worlds are reconstructed reproducibly from public HuggingFace releases. In particular, the 21M-passage wiki-18 corpus, retrieval indices, seeded base-question splits, and iterative deletion masks are deterministic, whereas world claim and rewrite passages are sampled with Qwen/Qwen3-32B and microsoft/phi-4. Reference split counts, SHA-256 digests, and the exact 507 Test Set A / 607 Test Set B base question IDs evaluated in the paper are provided in [configs/benchmark_manifest.json](configs/benchmark_manifest.json).
 
 ### Step 1: Prepare Corpus Indices & Transformation Worlds
 
@@ -257,7 +257,7 @@ Training produces three main artifacts under the output directory:
 
 ### Step 3: Unified Evaluation & Cross-Retriever Transfer
 
-Evaluate any trained EchoSpec checkpoint standalone, without exclude-seen episode filtering, and composed with orthogonal retrieval filters (TrustRAG and Semantic Dedup) across Test Sets A & B and all 7 open-domain QA benchmarks:
+Evaluate EchoSpec both with and without exclude-seen retrieval, together with optional TrustRAG and semantic-deduplication compositions, across both transformation suites and all seven open-domain QA benchmarks:
 
 ```bash
 # Standard in-domain evaluation (intfloat/e5-base-v2)
@@ -273,6 +273,12 @@ RETRIEVER=bge  ADAPTER_DIR=./outputs/echospec_qwen25_7b_s1/final_adapter bash sc
 RETRIEVER=bm25 ADAPTER_DIR=./outputs/echospec_qwen25_7b_s1/final_adapter bash scripts/evaluate_echospec.sh
 ```
 
+By default, [scripts/evaluate_echospec.sh](scripts/evaluate_echospec.sh) evaluates four protocol variants in a single pass:
+- **echospec** — Default EchoSpec configuration with exclude-seen enabled (corresponding to the main-table result, e.g., 28.9% Def@8 on Qwen2.5-7B)
+- **echospec_no_exclude_seen** — EchoSpec evaluated with exclude-seen disabled (protocol-fairness ablation, e.g., 31.6% Def@8 on Qwen2.5-7B)
+- **echospec_trustrag** — EchoSpec with exclude-seen enabled plus TrustRAG retrieval filtering
+- **echospec_semantic_dedup** — EchoSpec with exclude-seen enabled plus semantic deduplication
+
 Evaluation writes per-episode predictions and query traces under **predictions/** and aggregated metrics (conditional deference, primary-evidence reach, overall accuracy, abstention rate, exact match, token F1, selective precision, and retrieval-abstention F1) to **summary.json**.
 
 ---
@@ -283,7 +289,8 @@ Evaluation writes per-episode predictions and query traces under **predictions/*
 EchoSpec/
 ├── assets/                       # Paper overview, framework, and behavioral figures
 ├── configs/
-│   └── echospec_default.json     # Canonical Stage-1 & Stage-2 hyperparameter reference
+│   ├── echospec_default.json     # Canonical Stage-1 & Stage-2 hyperparameter reference
+│   └── benchmark_manifest.json   # Reference split counts, digests & paper Test A/B base IDs
 ├── echospec/
 │   ├── protocol.py               # Multi-turn <think>/<search>/<information>/<answer> protocol
 │   ├── wiki18.py                 # 21M-passage Arrow builder + e5 / BGE / Okapi BM25 indexers
