@@ -2,17 +2,17 @@
 
 # EchoSpec: Training Search Agents to Weigh Evidence Above Echoes
 
+[![arXiv](https://img.shields.io/badge/arXiv-2611.20034-b31b1b.svg)](https://arxiv.org/abs/2611.20034)
+[![Paper PDF](https://img.shields.io/badge/Paper-PDF-EC1C24.svg)](https://arxiv.org/pdf/2611.20034)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg)](https://www.python.org/)
 [![PyTorch + vLLM](https://img.shields.io/badge/Runtime-PyTorch%20%2B%20vLLM-EE4C2C.svg)](https://github.com/vllm-project/vllm)
-[![Retrievers](https://img.shields.io/badge/Retrievers-e5%20%C2%B7%20BGE%20%C2%B7%20BM25-0F766E.svg)](#zero-shot-cross-retriever-transfer)
-[![Backbones](https://img.shields.io/badge/Backbones-Qwen2.5%20%C2%B7%20Llama--3.1-4F46E5.svg)](#main-results)
 
 **Shihao Yang, Can Zeng, Xinzhe Li**  
 Tsinghua University  
 {yangshihao26, zengc26, li-xz26}@mails.tsinghua.edu.cn
 
-[**Overview**](#overview) · [**Why Agents Follow Echoes**](#why-search-agents-follow-echoes) · [**Method**](#the-echospec-framework) · [**Main Results**](#main-results) · [**Installation**](#installation) · [**End-to-End Reproduction**](#end-to-end-reproduction) · [**Project Structure**](#project-structure) · [**Citation**](#citation)
+[**Paper (PDF)**](https://arxiv.org/pdf/2611.20034) · [**arXiv**](https://arxiv.org/abs/2611.20034) · [**Overview**](#overview) · [**Method**](#the-echospec-framework) · [**Main Results**](#main-results) · [**Installation**](#installation) · [**Reproduction**](#end-to-end-reproduction) · [**Structure**](#project-structure) · [**Citation**](#citation)
 
 </div>
 
@@ -34,7 +34,7 @@ Tsinghua University
 
 Large language model search agents interleave chain-of-thought reasoning with multi-turn retrieval, yet open corpora routinely duplicate bare assertions across syndicated articles, mirrors, and summaries while leaving primary source articles intact.
 
-**EchoSpec** provides both a controlled **behavioral specification suite** over the 21M-passage Wikipedia dump (wiki-18) and a **two-stage post-training recipe** that teaches search agents *what* to query rather than merely *how often* to search:
+Introduced in our paper [**EchoSpec: Training Search Agents to Weigh Evidence Above Echoes**](https://arxiv.org/pdf/2611.20034) ([arXiv:2611.20034](https://arxiv.org/abs/2611.20034)), **EchoSpec** provides both a controlled **behavioral specification suite** over the 21M-passage Wikipedia dump (wiki-18) and a **two-stage post-training recipe** that teaches search agents *what* to query rather than merely *how often* to search:
 
 - **Five Corpus Transformations Plus an Unmodified Identity World:** Each multi-hop question instantiates an unmodified **Identity** world alongside five symmetric transformations (**Dup($m$)**, **Inject($m$)**, **Consistent($m$)**, **Rewrite**, and **Delete**; 10 worlds per test question across $m \in \{1, 3, 8\}$), separating invariance under claim repetition from sensitivity to genuine primary-evidence updates. Swapping only the answer string between true and false claims limits a held-out TF-IDF shortcut classifier to **0.60–0.68 AUC** across both test suites.
 - **Verification-Oriented Query Reformulation:** Rather than stopping at top-ranked claim echoes, **EchoSpec** pivots to bridge entities, verifies primary passages (25.8%–26.5% primary-evidence reach at $m=8$ echoes), and abstains selectively when primary support is absent (37.5%–52.5% on Delete).
@@ -127,7 +127,7 @@ Pooled across **Test Set A (Qwen3-32B, 507 questions $\times$ 10 worlds = 5,070 
 | **EchoSpec + TrustRAG** (3 seeds) | Qwen2.5-7B | 13.8 | 19.4 | 12.8 | 29.4 | 19.0 | 36.5 | 44.1 | 38.3 |
 | **EchoSpec + Sem. Dedup** (3 seeds) | Qwen2.5-7B | 16.7 | 25.9 | 28.7 | 36.2 | 20.2 | 33.9 | 46.2 | 40.0 |
 
-*Per-generator split:* On **Test Set A** (Qwen3-32B), EchoSpec achieves **19.0% / 23.6%** Def@8, **27.7% / 28.4%** Reach@8, and **13.5% / 13.6%** Rewrite exact match on Qwen2.5-7B / Llama-3.1-8B; on **Test Set B** (unseen Phi-4 family), EchoSpec achieves **38.8% / 37.7%** Def@8, **24.0% / 24.6%** Reach@8, and **16.9% / 18.1%** Rewrite exact match (vs. 7.9% / 10.2% Rewrite on base Qwen2.5-7B).
+*Per-generator split:* On **Test Set A** (Qwen3-32B), EchoSpec achieves **19.0% / 23.6%** Def@8, **27.7% / 28.4%** Reach@8, and **13.5% / 13.6%** Rewrite exact match on Qwen2.5-7B / Llama-3.1-8B; on **Test Set B** (unseen Phi-4 family), EchoSpec achieves **38.8% / 37.7%** Def@8, **24.0% / 24.6%** Reach@8, and **16.9% / 18.1%** Rewrite exact match (vs. 7.9% / 10.2% Rewrite on base Qwen2.5-7B). For component ablations (Table 4), full per-world and per-benchmark breakdowns (Tables 6–7), protocol-fairness and search-horizon controls (Tables 8–10), formal proofs (Appendix C), and qualitative multi-turn trajectories (Appendix H), see the [full paper (PDF)](https://arxiv.org/pdf/2611.20034).
 
 </details>
 
@@ -319,14 +319,18 @@ EchoSpec/
 
 ## Citation
 
-If you find **EchoSpec** useful in your research, please consider citing our paper:
+If you find **EchoSpec** useful in your research, please consider citing our [paper](https://arxiv.org/pdf/2611.20034) ([arXiv:2611.20034](https://arxiv.org/abs/2611.20034)):
 
 ```bibtex
 @article{yang2026echospec,
-  title   = {EchoSpec: Training Search Agents to Weigh Evidence Above Echoes},
-  author  = {Yang, Shihao and Zeng, Can and Li, Xinzhe},
-  year    = {2026},
-  url     = {https://github.com/unihsy/EchoSpec}
+  title         = {EchoSpec: Training Search Agents to Weigh Evidence Above Echoes},
+  author        = {Yang, Shihao and Zeng, Can and Li, Xinzhe},
+  journal       = {arXiv preprint arXiv:2611.20034},
+  year          = {2026},
+  eprint        = {2611.20034},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.IR},
+  url           = {https://arxiv.org/abs/2611.20034}
 }
 ```
 

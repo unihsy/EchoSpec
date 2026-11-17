@@ -44,6 +44,8 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/unihsy/EchoSpec"
 Repository = "https://github.com/unihsy/EchoSpec"
+Paper = "https://arxiv.org/pdf/2611.20034"
+arXiv = "https://arxiv.org/abs/2611.20034"
 
 [tool.setuptools.packages.find]
 include = ["echospec*"]
